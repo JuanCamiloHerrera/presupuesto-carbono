@@ -39,6 +39,13 @@ app.layout = html.Div([
                 children=[
                     html.P("Esta es una simple aplicación para visualizar una senda de emisiones netas de GEI y su implicación en los Presupuestos de carbono nacionales."),
                     html.P("Modifique la senda de emisiones netas entre los años 2025 y 2045 en sus respectivas cajas, y observe como cambian los Presupuestos de carbono quinquenales y las Emisiones acumuladas 2020-2050 en la gráfica inferior."),
+                    html.P("Recuerde que se busca el cumplimiento de los criterios establecidos para el Presupuesto de Carbono nacional, dentro de los cuales se incluye:"),
+                    html.Ul([
+                        html.Li("El cumplimiento de la meta de la NDC en 2030 (Emitir como máximo 169.44 MtCO2e)."),
+                        html.Li("Alineación con la meta de carbono neutralidad a 2050:"),
+                        html.Li("Alineación con el mensaje de estabilización de las emisiones para 2025."),
+                        html.Li("Alineación con el mensaje de mantener una trayectoria decreciente de las emisiones posterior a 2025."),
+                    ])
                 ],
                 className="box",
             ),
