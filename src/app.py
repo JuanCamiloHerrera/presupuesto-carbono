@@ -38,7 +38,9 @@ app.layout = html.Div([
             html.Div(
                 children=[
                     html.P("Esta es una simple aplicación para visualizar una senda de emisiones netas de GEI y su implicación en los Presupuestos de carbono nacionales."),
-                    html.P("Modifique la senda de emisiones netas entre los años 2025 y 2045 en sus respectivas cajas, y observe como cambian los Presupuestos de carbono quinquenales y las Emisiones acumuladas 2020-2050 en la gráfica inferior."),
+                    html.Br(),
+                    html.P("Modifique los valores de emisiones netas entre los años 2025 y 2045 en las cajas marcadas, y observe como cambia la trayectoria de emisiones netas y sus respectivos presupuestos de carbono quinquenales en la gráfica inferior."),
+                    html.Br(),
                     html.P("Recuerde que se busca el cumplimiento de los criterios establecidos para el Presupuesto de Carbono nacional, dentro de los cuales se incluye:"),
                     html.Ul([
                         html.Li("El cumplimiento de la meta de la NDC en 2030 (Emitir como máximo 169.44 MtCO2e)."),
@@ -57,36 +59,40 @@ app.layout = html.Div([
         dcc.Graph(id='scatter-chart'),
         html.Br(),
     html.Div([
+        html.Div(html.P(['Modifique en las siguientes cajas los valores de emisiones netas para el respectivo año',html.Br(),html.Br()]),
+        style={'margin-bottom': '10px', 'flex-wrap': 'wrap'}),
+        ]),
+    html.Div([
         html.Div([
-            html.Label('2025:'),
+            html.Label('Año 2025:'),
             dcc.Input(id='value-2025', type='number', min=0, max=400, value=220),
         ], style={'display': 'flex', 'align-items': 'center'}),
     
         html.Div(style={'width': '20px'}),
     
         html.Div([
-            html.Label('2030:'),
+            html.Label('Año 2030:'),
             dcc.Input(id='value-2030', type='number', min=0, max=400, value=170),
         ], style={'display': 'flex', 'align-items': 'center'}),
     
         html.Div(style={'width': '20px'}),
     
         html.Div([
-            html.Label('2035:'),
+            html.Label('Año 2035:'),
             dcc.Input(id='value-2035', type='number', min=0, max=400, value=120),
         ], style={'display': 'flex', 'align-items': 'center'}),
     
         html.Div(style={'width': '20px'}),
     
         html.Div([
-            html.Label('2040:'),
+            html.Label('Año 2040:'),
             dcc.Input(id='value-2040', type='number', min=0, max=400, value=75),
         ], style={'display': 'flex', 'align-items': 'center'}),
     
         html.Div(style={'width': '20px'}),
     
         html.Div([
-            html.Label('2045:'),
+            html.Label('Año 2045:'),
             dcc.Input(id='value-2045', type='number', min=0, max=400, value=35),
         ], style={'display': 'flex', 'align-items': 'center'}),
     ], style={'display': 'flex', 'flex-wrap': 'wrap'})
@@ -183,8 +189,22 @@ def update_chart(value_2025, value_2030, value_2035, value_2040, value_2045):
     updated_chart_fig.add_trace(go.Scatter(x=[2020, 2025, 2030, 2035, 2040, 2045, 2050], y=[253, value_2025, value_2030, value_2035, value_2040, value_2045, 0], mode='lines', line=dict(color='blue',width=4), name='Senda emisiones netas'))
 
     #Data points as markers
-    updated_chart_fig.add_trace(go.Scatter(x=[2025, 2030, 2035, 2040, 2045], y=[value_2025, value_2030, value_2035, value_2040, value_2045], mode='markers', marker=dict(size=15, color='red'), name='Petricor&Geosmina', showlegend=False))
-    
+    updated_chart_fig.add_trace(go.Scatter(x=[2025, 2030, 2035, 2040, 2045], y=[value_2025, value_2030, value_2035, value_2040, value_2045], mode='markers', marker=dict(size=15, color='red'), name='Geosmina', showlegend=False))
+
+    # Conditional annotation box
+    if value_2030 > 170:
+        updated_chart_fig.add_annotation(
+            text="La trayectoria de emisiones netas no cumple la NDC al 2030",
+            x=2036,
+            y=value_2030 + 15,  # Adjust y-position as needed
+            showarrow=False,
+            font=dict(color="red", size=12),
+            bordercolor='black',
+            borderwidth=2,
+            xref="x",
+            yref="y"
+        )
+        
     #Legend position
     updated_chart_fig.update_layout(height=700,legend=dict(orientation="h", yanchor="top", y=1.1, x=-0.03))
         
@@ -287,6 +307,5 @@ def update_chart1(value_2025, value_2030, value_2035, value_2040, value_2045):
 
 
 
-#app.run_server()  #Para correr en spyder IDE activar esta linea y ocultar la de heroku
 if __name__ == '__main__':
-    app.run_server(debug=True)   #Para correr en Heroku app activar esta linea y ocultar la de spyder
+    app.run_server(debug=True) 
