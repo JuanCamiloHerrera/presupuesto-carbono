@@ -13,6 +13,39 @@ from dash import dcc
 from dash import html
 import plotly.graph_objects as go
 import pandas as pd
+import numpy as np
+
+############## Brownian motion random walk ###################
+S = 2020 # starting year
+V0 = np.mean([218,253]) # starting value by 2022 as the average between confidence interval
+d = 10000000 # number of runs
+T = 50 # years ahead
+n = T + 1 # number of observations
+times = np.linspace(S, S+T, n)
+dB = 30 * np.random.normal(size=(n - 1 - 2, d)) # random walk # 30 is heuristic as an annual absolute yearly growth # -2 is for the three initial years but the first one is removed
+B1 = np.transpose(np.random.uniform(np.array([236, 247, 218]),np.array([270, 282, 253]), size=(d, 3))) # random values for 2020, 2021 and 2022 based on confidence interval of forecasted values
+B0 = np.full(shape=(1, d), fill_value=V0) # initial value for 2022
+B = np.cumsum(np.concatenate((B0,dB), axis=0),axis=0) # accumulated sum of random walk with initia value B0
+B = np.concatenate((B1,B[1:,]), axis=0) #B1 is concatenated to B where its first year is removed
+
+budgets=np.array([np.sum(B[0:6],axis=0),np.sum(B[6:11],axis=0),np.sum(B[11:16],axis=0),np.sum(B[16:21],axis=0),np.sum(B[21:26],axis=0),np.sum(B[26:31],axis=0)])
+
+# Define initial values for budget0 and budget1
+budget0 = 1550
+budget1 = 1000
+# Defining boolean inequalities based on budget initial values
+array1 = budgets[0] <= budget0
+array2 = budgets[0] >= budget0 - 10
+array3 = budgets[1] < budgets[0]
+array4 = budgets[1] <= budget1
+array5 = budgets[1] >= budget1 - 10
+boolean_array = [a1 and a2 and a3 and a4 and a5 for a1, a2, a3, a4, a5 in zip(array1, array2, array3, array4, array5)]
+
+# Filtering pathways based on boolean conditions
+pathways = pd.DataFrame(B[:, boolean_array], index=np.transpose(times)) 
+
+
+
 
 
 ############################ DASH LAYOUT ##########################
@@ -26,81 +59,127 @@ app.css.config.serve_locally = False
 
 app.layout = html.Div([
     # Title
-    html.Div(
-        children=[
-            html.H1("Presupuestos de carbono nacionales", className="title"), 
-        ]
-    ),
+    html.H1('Presupuestos de carbono nacionales',
+            style = {'textAlign':'center'}),
+    html.H3('Herramientas para la definición de los presupuestos de carbono nacionales',
+            style = {'textAlign':'center'}),
 
-    # Introduction and Instructions Box
-    html.Div(
-        children=[
-            html.Div(
-                children=[
-                    html.P("Esta es una simple aplicación para visualizar una senda de emisiones netas de GEI y su implicación en los Presupuestos de carbono nacionales."),
+    html.Br(),
+
+    dcc.Tabs([
+            dcc.Tab(label = 'Sendas', children = [
+                html.Br(),
+                html.H3('Escenario de emisiones', style={'textAlign': 'center'}),
+                html.Br(),
+
+                html.Div(
+                    children=[
+                        html.Div(
+                            children=[
+                                html.P("Esta es una simple aplicación para visualizar una senda de emisiones netas de GEI y su implicación en los Presupuestos de carbono nacionales."),
+                                html.Br(),
+                                html.P("Modifique los valores de emisiones netas entre los años 2025 y 2045 en las cajas marcadas, y observe como cambia la trayectoria de emisiones netas y sus respectivos presupuestos de carbono quinquenales en la gráfica inferior."),
+                                html.Br(),
+                                html.P("Recuerde que se busca el cumplimiento de los criterios establecidos para el Presupuesto de Carbono nacional, dentro de los cuales se incluye:"),
+                                html.Ul([
+                                    html.Li("El cumplimiento de la meta de la NDC en 2030 (Emitir como máximo 169.44 MtCO2e)."),
+                                    html.Li("Alineación con la meta de carbono neutralidad a 2050:"),
+                                    html.Li("Alineación con el mensaje de estabilización de las emisiones para 2025."),
+                                    html.Li("Alineación con el mensaje de mantener una trayectoria decreciente de las emisiones posterior a 2025."),
+                                ])
+                            ],
+                            className="box",
+                        ),
+                    ]
+                ),
+
+
+                html.Div([
+                    dcc.Graph(id='scatter-chart'),
                     html.Br(),
-                    html.P("Modifique los valores de emisiones netas entre los años 2025 y 2045 en las cajas marcadas, y observe como cambia la trayectoria de emisiones netas y sus respectivos presupuestos de carbono quinquenales en la gráfica inferior."),
-                    html.Br(),
-                    html.P("Recuerde que se busca el cumplimiento de los criterios establecidos para el Presupuesto de Carbono nacional, dentro de los cuales se incluye:"),
-                    html.Ul([
-                        html.Li("El cumplimiento de la meta de la NDC en 2030 (Emitir como máximo 169.44 MtCO2e)."),
-                        html.Li("Alineación con la meta de carbono neutralidad a 2050:"),
-                        html.Li("Alineación con el mensaje de estabilización de las emisiones para 2025."),
-                        html.Li("Alineación con el mensaje de mantener una trayectoria decreciente de las emisiones posterior a 2025."),
-                    ])
-                ],
-                className="box",
-            ),
-        ]
-    ),
+                html.Div([
+                    html.Div([
+                        html.Label('2025:'),
+                        dcc.Input(id='value-2025', type='number', min=0, max=400, value=248),
+                    ], style={'display': 'flex', 'align-items': 'center'}),
+                
+                    html.Div(style={'width': '20px'}),
+                
+                    html.Div([
+                        html.Label('2030:'),
+                        dcc.Input(id='value-2030', type='number', min=0, max=400, value=170),
+                    ], style={'display': 'flex', 'align-items': 'center'}),
+                
+                    html.Div(style={'width': '20px'}),
+                
+                    html.Div([
+                        html.Label('2035:'),
+                        dcc.Input(id='value-2035', type='number', min=0, max=400, value=120),
+                    ], style={'display': 'flex', 'align-items': 'center'}),
+                
+                    html.Div(style={'width': '20px'}),
+                
+                    html.Div([
+                        html.Label('2040:'),
+                        dcc.Input(id='value-2040', type='number', min=0, max=400, value=75),
+                    ], style={'display': 'flex', 'align-items': 'center'}),
+                
+                    html.Div(style={'width': '20px'}),
+                
+                    html.Div([
+                        html.Label('2045:'),
+                        dcc.Input(id='value-2045', type='number', min=0, max=400, value=35),
+                    ], style={'display': 'flex', 'align-items': 'center'}),
+                ], style={'display': 'flex', 'flex-wrap': 'wrap'})
 
-    # Dash scenarios pathways and input boxes
-    html.Div([
-        dcc.Graph(id='scatter-chart'),
-        html.Br(),
-    html.Div([
-        html.Div(html.P(['Modifique en las siguientes cajas los valores de emisiones netas para el respectivo año',html.Br(),html.Br()]),
-        style={'margin-bottom': '10px', 'flex-wrap': 'wrap'}),
-        ]),
-    html.Div([
-        html.Div([
-            html.Label('Año 2025:'),
-            dcc.Input(id='value-2025', type='number', min=0, max=400, value=220),
-        ], style={'display': 'flex', 'align-items': 'center'}),
-    
-        html.Div(style={'width': '20px'}),
-    
-        html.Div([
-            html.Label('Año 2030:'),
-            dcc.Input(id='value-2030', type='number', min=0, max=400, value=170),
-        ], style={'display': 'flex', 'align-items': 'center'}),
-    
-        html.Div(style={'width': '20px'}),
-    
-        html.Div([
-            html.Label('Año 2035:'),
-            dcc.Input(id='value-2035', type='number', min=0, max=400, value=120),
-        ], style={'display': 'flex', 'align-items': 'center'}),
-    
-        html.Div(style={'width': '20px'}),
-    
-        html.Div([
-            html.Label('Año 2040:'),
-            dcc.Input(id='value-2040', type='number', min=0, max=400, value=75),
-        ], style={'display': 'flex', 'align-items': 'center'}),
-    
-        html.Div(style={'width': '20px'}),
-    
-        html.Div([
-            html.Label('Año 2045:'),
-            dcc.Input(id='value-2045', type='number', min=0, max=400, value=35),
-        ], style={'display': 'flex', 'align-items': 'center'}),
-    ], style={'display': 'flex', 'flex-wrap': 'wrap'})
+                ]),
 
-    ]),
-    #Dash budget chart
-    html.Div([
-        dcc.Graph(id='budget-chart'),
+                html.Div([
+                    dcc.Graph(id='budget-chart'),
+                ])
+            ]),
+            dcc.Tab(label = 'Presupuestos', children = [
+                html.Br(),
+                html.H3('1er y 2do Presupuesto de carbono', style={'textAlign': 'center'}),
+                html.Br(),
+
+                html.Div(
+                    children=[
+                        html.Div(
+                            children=[
+                                html.P("Esta herramienta muestra posibles trayectorias de emisiones netas, para unos niveles fijos de presupuestos de carbono"),
+                                html.Br(),
+                                html.P("Escoja en los sliders, los valores del primer y el segundo presupuesto de carbono, y observe posibles trayectorias de emisiones netas de GEI que cumplen tales presupuestos."),
+                                html.Br(),
+                                html.P("También observe el valor de las emisiones de cada una de las trayectorias al año 2030 y como se distribuyen."),
+                            ],
+                            className="box",
+                        ),
+                    ]
+                ),
+
+                html.Div([
+                    html.H5("Primer Presupuesto 2020-2025 [MtCO2eq]"),
+                    dcc.Slider(
+                        id='budget0-slider',
+                        min=1200, max=1700, step=10, value=budget0,
+                        marks={i: str(i) for i in range(1200, 1700, 100)},
+                        tooltip={'placement': 'bottom', 'always_visible': True}
+                    ),
+                    html.H5("Segundo Presupuesto 2026-2030 [MtCO2eq]"),
+                    dcc.Slider(
+                        id='budget1-slider',
+                        min=800, max=1300, step=10, value=budget1,
+                        marks={i: str(i) for i in range(800, 1300, 100)},
+                        tooltip={'placement': 'bottom', 'always_visible': True}
+                    ),
+                    html.H5("Trayectorias de emisiones que cumplen el primer y segundo presupuesto"),
+                    dcc.Graph(id='pathways-plot'),
+                    html.H5("Frecuencia de emisiones al 2030"),
+                    dcc.Graph(id='histogram')
+                ])
+
+            ])
     ])
 ])
 
@@ -112,9 +191,9 @@ app.css.append_css({
 })
 
 
+################### CALLBACKS ######################
 
-
-########################## SCENARIO PATHWAYS CHART ##########################
+########SCENARIO PATHWAYS CHART CALLBACK ###############
 
 #Callback
 @app.callback(
@@ -124,13 +203,10 @@ app.css.append_css({
      Input('value-2045', 'value')]
 )
 
-
-
-
-#Update function
+# Update function
 def update_chart(value_2025, value_2030, value_2035, value_2040, value_2045):
     
-    #Scenarios
+    # Scenarios
     year = [2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030]
     lower = [293, 292, 270, 249, 229, 209, 189, 169]
     upper = [318, 319, 316, 294, 266, 237, 209, 180]
@@ -158,37 +234,37 @@ def update_chart(value_2025, value_2030, value_2035, value_2040, value_2045):
     bid_color='rgba(13, 58, 78, 0.6)' 
     ndc_color='rgba(255, 192, 0, 0.6)' 
     
-    #Acelerador
+    # Acelerador
     trace_lower = go.Scatter(x=year, y=lower, mode='lines', name='Acelerador', line=dict(color=acelerador_color), showlegend=False)
     trace_upper = go.Scatter(x=year, y=upper, mode='lines', name='Acelerador', fill='tonexty', fillcolor=acelerador_color, line=dict(color=acelerador_color))
 
-    #E2050
+    # E2050
     trace_lower1 = go.Scatter(x=year1, y=lower1, mode='lines', name='E2050', line=dict(color=e2050_color), showlegend=False)
     trace_upper1 = go.Scatter(x=year1, y=upper1, mode='lines', name='E2050', fill='tonexty', fillcolor=e2050_color, line=dict(color=e2050_color))
 
-    #INGEI
+    # INGEI
     trace_lower2 = go.Scatter(x=year2, y=lower2, mode='lines', name='Intervalo de confianza estimación INGEI', line=dict(color=inventario_color), showlegend=False)
     trace_upper2 = go.Scatter(x=year2, y=upper2, mode='lines', name='Intervalo de confianza estimación INGEI', fill='tonexty', fillcolor=inventario_color, line=dict(color=inventario_color), showlegend=False)
     trace_mean2 = go.Scatter(x=year2, y=mean2, mode='markers+lines', name='Estimación INGEI', line=dict(color='rgba(233, 113, 50, 0.6)'))
 
-    #Single scatter
+    # Single scatter
     trace_ccdr_wb = go.Scatter(x=year3, y=ccdr_wb, mode='markers+lines', name='CCDR-WB', marker=dict(color=ccdr_color, size=6, symbol='x'))
     trace_bid = go.Scatter(x=year3, y=bid, mode='markers+lines', name='BID', marker=dict(color=bid_color, size=6, symbol='cross'))
     trace_ndc = go.Scatter(x=year, y=ndc, mode='markers+lines', name='NDC-M3', marker=dict(color=ndc_color, size=6, symbol='square'))
 
-    #Create layout
+    # Create layout
     updated_chart_layout = go.Layout(title='Escenarios de emisiones netas GEI Colombia', yaxis=dict(title='MtCO2eq'), xaxis=dict(title='Año'),margin=dict(t=150))
 
-    #Create figure for the updated chart
+    # Create figure for the updated chart
     updated_chart_fig = go.Figure(data=[trace_lower, trace_upper, trace_lower1, trace_upper1, trace_lower2, trace_upper2, trace_mean2, trace_ccdr_wb, trace_bid, trace_ndc], layout=updated_chart_layout)
 
     # Static datapoints at the beginning and end
     updated_chart_fig.add_trace(go.Scatter(x=[2020, 2050], y=[253, 0], mode='markers', marker=dict(size=15, color='blue'), name=None, showlegend=False))
 
-    #Connecting lines
+    # Connecting lines
     updated_chart_fig.add_trace(go.Scatter(x=[2020, 2025, 2030, 2035, 2040, 2045, 2050], y=[253, value_2025, value_2030, value_2035, value_2040, value_2045, 0], mode='lines', line=dict(color='blue',width=4), name='Senda emisiones netas'))
 
-    #Data points as markers
+    # Data points as markers
     updated_chart_fig.add_trace(go.Scatter(x=[2025, 2030, 2035, 2040, 2045], y=[value_2025, value_2030, value_2035, value_2040, value_2045], mode='markers', marker=dict(size=15, color='red'), name='Geosmina', showlegend=False))
 
     # Conditional annotation box
@@ -204,13 +280,13 @@ def update_chart(value_2025, value_2030, value_2035, value_2040, value_2045):
             xref="x",
             yref="y"
         )
-        
-    #Legend position
+
+    # Legend position
     updated_chart_fig.update_layout(height=700,legend=dict(orientation="h", yanchor="top", y=1.1, x=-0.03))
         
     return updated_chart_fig
 
-#################### BUDGET CHART ############################
+######### BUDGET CHART CALLBACK #############
 
 #Callback
 @app.callback(
@@ -224,7 +300,7 @@ def update_chart(value_2025, value_2030, value_2035, value_2040, value_2045):
 #Update function
 def update_chart1(value_2025, value_2030, value_2035, value_2040, value_2045):
     global df_budget, total_budget
-    #Initial static values
+    # Initial static values
     years = list(range(2020, 2051))
     emissions = [253] + [0] * (len(years) - 2) + [0]
     
@@ -232,7 +308,7 @@ def update_chart1(value_2025, value_2030, value_2035, value_2040, value_2045):
     df = pd.DataFrame({'Year': years, 'NetEmissions': emissions})
     
     
-    #Callback years and values (replace these with your actual callback values)
+    # Callback years and values (replace these with your actual callback values)
     callback_years = [2025, 2030, 2035, 2040, 2045]
     callback_values = {
         2025: value_2025,
@@ -242,7 +318,7 @@ def update_chart1(value_2025, value_2030, value_2035, value_2040, value_2045):
         2045: value_2045
     }
     
-    #Update dynamic values in the DataFrame
+    # Update dynamic values in the DataFrame
     for year in callback_years:
         if year in callback_values:
             df.loc[df['Year'] == year, 'NetEmissions'] = callback_values[year]
@@ -256,7 +332,7 @@ def update_chart1(value_2025, value_2030, value_2035, value_2040, value_2045):
     
     
     #Budget estimation
-    p1=752.914+df.loc[2023:2025,'NetEmissions'].sum() #Mean of estimated emissions from 2020 to 2022 (752.914) plus the output of the pathway form 2023 to 2025
+    p1=752.914+df.loc[2023:2025,'NetEmissions'].sum() # Mean of estimated emissions from 2020 to 2022 (752.914) plus the output of the pathway form 2023 to 2025
     p2=df.loc[2026:2030,'NetEmissions'].sum()
     p3=df.loc[2031:2035,'NetEmissions'].sum()
     p4=df.loc[2036:2040,'NetEmissions'].sum()
@@ -303,9 +379,92 @@ def update_chart1(value_2025, value_2030, value_2035, value_2040, value_2045):
     
     return fig
 
+############## RANDOM WALK AND HISTOGRAM CALLBACK ###########
+
+@app.callback(
+    [Output('pathways-plot', 'figure'),
+     Output('histogram', 'figure')],
+    [Input('budget0-slider', 'value'),
+     Input('budget1-slider', 'value')]
+)
+def update_plots(budget0, budget1):
+    # Filtering arrays based on slider values
+    array1 = budgets[0] <= budget0
+    array2 = budgets[0] >= budget0 - 10
+    array3 = budgets[1] < budgets[0]
+    array4 = budgets[1] <= budget1
+    array5 = budgets[1] >= budget1 - 10
+    boolean_array = [a1 and a2 and a3 and a4 and a5 for a1, a2, a3, a4, a5 in zip(array1, array2, array3, array4, array5)]
+
+    # Filtering pathways based on boolean conditions
+    pathways = pd.DataFrame(B[:, boolean_array], index=np.transpose(times))
+    
+    default_linewidth = 2
+    highlighted_linewidth = 3
+
+    fig = go.FigureWidget() # hover text goes here
+    fig.layout.hovermode = 'closest'
+    fig.layout.hoverdistance = -1 # ensures no "gaps" for selecting sparse data
+
+    # Create Plotly figure for pathways
+    fig_pathways = go.Figure()
+    for t in pathways.columns:
+        fig_pathways.add_trace(go.Scatter(
+            x=pathways.index,
+            y=pathways[t],
+            name=t,
+            mode='lines',
+            opacity=0.3,
+            line={'width': default_linewidth, 'color': 'grey'}
+        ))
+    
+    fig_pathways.update_yaxes(range=[-10, 350], title="MtCO2eq")  # Adding y-axis title
+    fig_pathways.update_layout(showlegend=False)
+    fig_pathways.update_xaxes(range=[2020, 2035])
+
+    # Adding NDC marker
+    fig_pathways.add_trace(go.Scatter(
+        x=[2030],
+        y=[170],
+        mode='markers',
+        marker=dict(size=10, symbol='x'),
+        name='NDC'
+    ))
+
+    # Highlight traces when clicking
+    def update_trace(trace, points, selector):
+        if len(points.point_inds)==1:
+            i = points.trace_index
+            for x in range(0,len(fig.data)):
+                fig.data[x]['line']['color'] = 'grey'
+                fig.data[x]['opacity'] = 0.3
+                fig.data[x]['line']['width'] = default_linewidth
+            #print('Correct Index: {}',format(i))
+            fig.data[i]['line']['color'] = 'red'
+            fig.data[i]['opacity'] = 1
+            fig.data[i]['line']['width'] = highlighted_linewidth
+
+    # Add the on_click event to each trace separately       
+    for x in range(0,len(fig_pathways.data)):
+        fig_pathways.data[x].on_click(update_trace)
+    
+    
+    
+    # Create histogram
+    hist_data = B[10, boolean_array]
+    fig_histogram = go.Figure(data=[go.Histogram(x=hist_data, histnorm='percent')])
+    
+    # Add vertical line at value of 170
+    fig_histogram.add_shape(type="line",
+                             x0=170, y0=0, x1=170,
+                             line=dict(width=3))
+    
+    fig_histogram.update_xaxes(title="Emisiones al 2030 [MtCO2eq]")  # Adding x-axis title
+    
+    return fig_pathways, fig_histogram
 
 
 
-
+# app.run_server()  #Para correr en IDE activar esta linea y ocultar la de heroku
 if __name__ == '__main__':
-    app.run_server(debug=True) 
+    app.run_server(debug=True)   #Para correr en Heroku app activar esta linea y ocultar la de spyder
