@@ -19,7 +19,7 @@ import numpy as np
 S = 2020 # starting year
 V0 = np.mean([218,253]) # starting value by 2022 as the average between confidence interval
 d = 1000000 # number of runs
-T = 50 # years ahead
+T = 15 # years ahead
 n = T + 1 # number of observations
 times = np.linspace(S, S+T, n)
 dB = 30 * np.random.normal(size=(n - 1 - 2, d)) # random walk # 30 is heuristic as an annual absolute yearly growth # -2 is for the three initial years but the first one is removed
@@ -465,6 +465,6 @@ def update_plots(budget0, budget1):
 
 
 
-# app.run_server()  #Para correr en IDE activar esta linea y ocultar la de heroku
+# app.run_server()  #To run on IDE
 if __name__ == '__main__':
-    app.run_server(debug=True)   #Para correr en Heroku app activar esta linea y ocultar la de spyder
+    app.run_server(debug=True)   #For deployment
