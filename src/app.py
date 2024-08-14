@@ -18,7 +18,7 @@ import numpy as np
 ############## Brownian motion random walk ###################
 S = 2020 # starting year
 V0 = np.mean([218,253]) # starting value by 2022 as the average between confidence interval
-d = 1000000 # number of runs
+d = 500000 # number of runs
 T = 15 # years ahead
 n = T + 1 # number of observations
 times = np.linspace(S, S+T, n)
