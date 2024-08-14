@@ -14,7 +14,6 @@ from dash import html
 import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
-import os    
 
 ############## Brownian motion random walk ###################
 S = 2020 # starting year
